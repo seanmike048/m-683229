@@ -1,4 +1,5 @@
 
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +15,7 @@ import Portfolio from "./pages/Portfolio";
 import Performance from "./pages/Performance";
 import Analysis from "./pages/Analysis";
 import Settings from "./pages/Settings";
+import BidVerificator from "./pages/BidVerificator";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +26,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<BidVerificator />} />
+          <Route path="/dashboard" element={<Index />} />
           <Route path="/stocks" element={<Stocks />} />
           <Route path="/markets" element={<Markets />} />
           <Route path="/currencies" element={<Currencies />} />
@@ -42,3 +45,4 @@ const App = () => (
 );
 
 export default App;
+
