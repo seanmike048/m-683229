@@ -209,7 +209,7 @@ const BidVerificator = () => {
                   <Button 
                     onClick={handleAnalyze}
                     disabled={isValidating}
-                    className="flex-1 min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white"
+                    className="flex-1 min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg"
                   >
                     <Zap className="h-4 w-4 mr-2" />
                     {isValidating ? 'Analyzing...' : 'Analyze Request'}
@@ -217,14 +217,14 @@ const BidVerificator = () => {
                   <Button 
                     variant="outline" 
                     onClick={handleClear}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="border-2 border-gray-500 text-gray-200 hover:bg-gray-700 hover:border-gray-400 bg-gray-800/50 font-medium"
                   >
                     Clear All
                   </Button>
                   <Button 
                     variant="outline" 
                     onClick={handleFormatJSON}
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="border-2 border-blue-500/50 text-blue-300 hover:bg-blue-900/30 hover:border-blue-400 bg-blue-900/10 font-medium"
                   >
                     Format JSON
                   </Button>
@@ -233,7 +233,7 @@ const BidVerificator = () => {
                 {/* Control Buttons Row 2 */}
                 <div className="flex flex-wrap gap-3">
                   <Select value={selectedExample} onValueChange={handleLoadExample}>
-                    <SelectTrigger className="flex-1 bg-gray-800 border-gray-600 text-gray-200">
+                    <SelectTrigger className="flex-1 bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-500">
                       <SelectValue placeholder="Load Example..." />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
@@ -249,7 +249,7 @@ const BidVerificator = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="flex items-center gap-2 border-2 border-purple-500/50 text-purple-300 hover:bg-purple-900/30 hover:border-purple-400 bg-purple-900/10 font-medium"
                   >
                     <Upload className="h-4 w-4" />
                     Upload File
@@ -274,7 +274,7 @@ const BidVerificator = () => {
                   </Badge>
                 </div>
 
-                {/* JSON Input Area with Syntax Highlighting */}
+                {/* JSON Input Area with Enhanced Syntax Highlighting */}
                 <div className="relative" id="json-input-area">
                   <JsonHighlighter
                     value={jsonInput}
@@ -283,9 +283,12 @@ const BidVerificator = () => {
                     placeholder="Paste your OpenRTB JSON bid request here..."
                   />
                   {jsonInput && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <Badge variant="outline" className="bg-black/70 text-orange-400 border-orange-500/50">
+                    <div className="absolute top-3 right-3 z-10 flex gap-2">
+                      <Badge variant="outline" className="bg-black/80 text-orange-400 border-orange-500/50 font-mono">
                         {jsonInput.split('\n').length} lines
+                      </Badge>
+                      <Badge variant="outline" className="bg-black/80 text-blue-400 border-blue-500/50 font-mono">
+                        {Math.round(jsonInput.length / 1024 * 10) / 10}KB
                       </Badge>
                     </div>
                   )}
@@ -383,32 +386,37 @@ const BidVerificator = () => {
                     </Button>
                   </div>
 
-                  {/* Issues List */}
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                  {/* Enhanced Issues List with Better Error Location */}
+                  <div className="space-y-3 max-h-[450px] overflow-y-auto custom-scrollbar">
                     {getFilteredIssues().map((issue, index) => (
                       <div
                         key={index}
                         onClick={() => handleIssueClick(issue.fieldPath)}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg ${getSeverityColor(issue.severity)}`}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-orange-500/20 ${getSeverityColor(issue.severity)}`}
                       >
                         <div className="flex items-start gap-3">
                           {getSeverityIcon(issue.severity)}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <code className="text-sm font-mono bg-black/20 px-2 py-1 rounded">
+                            <div className="flex items-center gap-2 mb-2">
+                              <code className="text-sm font-mono bg-black/30 px-3 py-1 rounded-md border border-orange-500/30 text-orange-300">
                                 {issue.fieldPath}
                               </code>
-                              <Eye className="h-4 w-4 opacity-60" />
+                              <Eye className="h-4 w-4 opacity-70 text-orange-400" />
+                              <span className="text-xs text-gray-400 font-medium">Click to locate</span>
                             </div>
-                            <div className="text-sm font-medium mb-1">{issue.message}</div>
+                            <div className="text-sm font-semibold mb-2">{issue.message}</div>
                             {issue.actualValue && (
-                              <div className="text-xs opacity-75 mt-1">
-                                <strong>Found:</strong> <code className="bg-black/20 px-1 rounded">{String(issue.actualValue)}</code>
+                              <div className="text-xs opacity-80 mt-2 p-2 bg-black/20 rounded border">
+                                <strong className="text-red-300">Found:</strong> 
+                                <code className="ml-2 bg-red-900/30 px-2 py-1 rounded text-red-200 border border-red-500/30">
+                                  {String(issue.actualValue)}
+                                </code>
                               </div>
                             )}
                             {issue.expectedValue && (
-                              <div className="text-xs opacity-75 mt-1">
-                                <strong>Expected:</strong> {issue.expectedValue}
+                              <div className="text-xs opacity-80 mt-2 p-2 bg-black/20 rounded border">
+                                <strong className="text-green-300">Expected:</strong> 
+                                <span className="ml-2 text-green-200">{issue.expectedValue}</span>
                               </div>
                             )}
                           </div>
@@ -444,20 +452,20 @@ const BidVerificator = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: rgba(75, 85, 99, 0.1);
-          border-radius: 3px;
+          border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(249, 115, 22, 0.3);
-          border-radius: 3px;
+          background: rgba(249, 115, 22, 0.4);
+          border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(249, 115, 22, 0.5);
+          background: rgba(249, 115, 22, 0.6);
         }
       `}</style>
     </div>

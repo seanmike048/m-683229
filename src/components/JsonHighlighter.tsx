@@ -20,38 +20,88 @@ export const JsonHighlighter: React.FC<JsonHighlighterProps> = ({
   const [scrollLeft, setScrollLeft] = useState(0);
 
   const highlightJSON = (json: string) => {
-    // JSON syntax highlighting patterns
+    // Enhanced JSON syntax highlighting with VS Code-like colors
     let highlighted = json
-      // Strings
+      // Strings (orange/salmon)
       .replace(/"([^"\\]|\\.)*"/g, '<span class="json-string">$&</span>')
-      // Numbers
+      // Numbers (light green)
       .replace(/\b-?\d+\.?\d*([eE][+-]?\d+)?\b/g, '<span class="json-number">$&</span>')
-      // Booleans
+      // Booleans (blue)
       .replace(/\b(true|false)\b/g, '<span class="json-boolean">$&</span>')
-      // Null
+      // Null (blue)
       .replace(/\bnull\b/g, '<span class="json-null">$&</span>')
-      // Keys (property names)
+      // Keys (light blue/cyan)
       .replace(/"([^"]+)"(\s*:)/g, '<span class="json-key">"$1"</span>$2')
-      // Brackets and braces
+      // Brackets (yellow/gold)
       .replace(/[\[\]]/g, '<span class="json-bracket">$&</span>')
       .replace(/[{}]/g, '<span class="json-brace">$&</span>')
-      // Commas and colons
+      // Commas and colons (white)
       .replace(/,/g, '<span class="json-comma">,</span>')
       .replace(/:/g, '<span class="json-colon">:</span>');
 
-    // Highlight specific path if provided
+    // Enhanced path highlighting for error location
     if (highlightedPath) {
-      const pathParts = highlightedPath.split('.');
-      let currentPath = '';
+      // Convert path like "device.ifa" or "imp[0].native.request" to regex patterns
+      const pathSegments = highlightedPath.split('.');
+      let currentRegex = '';
       
-      pathParts.forEach((part, index) => {
-        currentPath += (index > 0 ? '\\.' : '') + part.replace(/\[(\d+)\]/, '\\[$1\\]');
-        const regex = new RegExp(`("${part.replace(/\[(\d+)\]/, '')}")(\\s*:)`, 'g');
-        highlighted = highlighted.replace(regex, '<span class="json-highlighted">"$1"</span>$2');
+      pathSegments.forEach((segment, index) => {
+        const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/);
+        if (arrayMatch) {
+          // Handle array notation like imp[0]
+          const fieldName = arrayMatch[1];
+          const arrayIndex = parseInt(arrayMatch[2]);
+          
+          // Create a more precise regex to find the exact array element
+          const fieldPattern = `("${fieldName}"\\s*:\\s*\\[)([^\\]]*?)`;
+          highlighted = highlighted.replace(new RegExp(fieldPattern, 'g'), (match, opening, content) => {
+            const elements = content.split(',');
+            if (elements[arrayIndex]) {
+              elements[arrayIndex] = `<span class="json-highlighted-array">${elements[arrayIndex]}</span>`;
+            }
+            return opening + elements.join(',');
+          });
+        } else {
+          // Handle regular field highlighting
+          const regex = new RegExp(`("${segment}")(\\s*:)`, 'g');
+          highlighted = highlighted.replace(regex, '<span class="json-highlighted">"$1"</span>$2');
+        }
       });
     }
 
     return highlighted;
+  };
+
+  const findLineAndColumn = (text: string, path: string) => {
+    const lines = text.split('\n');
+    const pathParts = path.split('.');
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lastPart = pathParts[pathParts.length - 1];
+      
+      // Handle array notation
+      const arrayMatch = lastPart.match(/^(.+)\[(\d+)\]$/);
+      const searchKey = arrayMatch ? arrayMatch[1] : lastPart;
+      
+      if (line.includes(`"${searchKey}"`)) {
+        return { line: i + 1, column: line.indexOf(`"${searchKey}"`) + 1 };
+      }
+    }
+    return { line: 1, column: 1 };
+  };
+
+  const scrollToHighlightedPath = () => {
+    if (highlightedPath && textareaRef.current) {
+      const { line } = findLineAndColumn(value, highlightedPath);
+      const lineHeight = 22; // Approximate line height
+      const scrollPosition = (line - 1) * lineHeight;
+      
+      textareaRef.current.scrollTop = scrollPosition;
+      if (highlightRef.current) {
+        highlightRef.current.scrollTop = scrollPosition;
+      }
+    }
   };
 
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -76,14 +126,23 @@ export const JsonHighlighter: React.FC<JsonHighlighterProps> = ({
     }
   }, [scrollTop, scrollLeft, value]);
 
+  useEffect(() => {
+    if (highlightedPath) {
+      scrollToHighlightedPath();
+    }
+  }, [highlightedPath]);
+
   return (
-    <div className="relative">
-      <style jsx>{`
+    <>
+      <style>{`
         .json-highlighter-container {
           position: relative;
-          font-family: 'Fira Code', 'Monaco', 'Consolas', 'Courier New', monospace;
+          font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
           font-size: 14px;
-          line-height: 1.5;
+          line-height: 22px;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #1e1e1e;
         }
         
         .json-highlight-layer {
@@ -98,93 +157,120 @@ export const JsonHighlighter: React.FC<JsonHighlighterProps> = ({
           white-space: pre-wrap;
           word-wrap: break-word;
           overflow: hidden;
-          padding: 12px;
-          border: 1px solid #404040;
-          border-radius: 6px;
+          padding: 16px;
+          border: 2px solid #404040;
+          border-radius: 8px;
           z-index: 1;
+          transition: border-color 0.3s ease;
         }
         
         .json-textarea {
           position: relative;
           width: 100%;
-          min-height: 400px;
-          max-height: 600px;
+          min-height: 450px;
+          max-height: 650px;
           background: transparent;
           color: #d4d4d4;
-          border: 1px solid #404040;
-          border-radius: 6px;
-          padding: 12px;
-          font-family: 'Fira Code', 'Monaco', 'Consolas', 'Courier New', monospace;
+          border: 2px solid #404040;
+          border-radius: 8px;
+          padding: 16px;
+          font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
           font-size: 14px;
-          line-height: 1.5;
+          line-height: 22px;
           resize: vertical;
           outline: none;
           z-index: 2;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         
         .json-textarea:focus {
           border-color: #f97316;
-          box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+          box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
         }
         
         .json-textarea::placeholder {
           color: #6b7280;
+          font-style: italic;
         }
         
-        :global(.json-string) {
+        /* VS Code-like syntax highlighting */
+        .json-string {
           color: #ce9178;
         }
         
-        :global(.json-number) {
+        .json-number {
           color: #b5cea8;
         }
         
-        :global(.json-boolean) {
+        .json-boolean {
           color: #569cd6;
-        }
-        
-        :global(.json-null) {
-          color: #569cd6;
-        }
-        
-        :global(.json-key) {
-          color: #9cdcfe;
           font-weight: 500;
         }
         
-        :global(.json-bracket) {
+        .json-null {
+          color: #569cd6;
+          font-weight: 500;
+        }
+        
+        .json-key {
+          color: #9cdcfe;
+          font-weight: 600;
+        }
+        
+        .json-bracket {
           color: #ffd700;
           font-weight: bold;
         }
         
-        :global(.json-brace) {
+        .json-brace {
           color: #ffd700;
           font-weight: bold;
         }
         
-        :global(.json-comma) {
+        .json-comma {
           color: #d4d4d4;
         }
         
-        :global(.json-colon) {
+        .json-colon {
           color: #d4d4d4;
         }
         
-        :global(.json-highlighted) {
+        .json-highlighted {
+          background: rgba(249, 115, 22, 0.4);
+          color: #ff6b35 !important;
+          font-weight: bold;
+          animation: errorPulse 3s ease-in-out;
+          border-radius: 4px;
+          padding: 2px 4px;
+          margin: 0 1px;
+          border: 1px solid #f97316;
+          box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+        }
+        
+        .json-highlighted-array {
           background: rgba(249, 115, 22, 0.3);
           color: #f97316 !important;
-          font-weight: bold;
-          animation: pulse 2s infinite;
-          border-radius: 2px;
-          padding: 0 2px;
+          border-radius: 3px;
+          padding: 1px 2px;
+          border: 1px solid rgba(249, 115, 22, 0.5);
         }
         
-        @keyframes pulse {
+        @keyframes errorPulse {
           0%, 100% { 
-            background: rgba(249, 115, 22, 0.3);
+            background: rgba(249, 115, 22, 0.4);
+            box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+          }
+          25% { 
+            background: rgba(249, 115, 22, 0.6);
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);
           }
           50% { 
+            background: rgba(249, 115, 22, 0.8);
+            box-shadow: 0 0 16px rgba(249, 115, 22, 0.7);
+          }
+          75% { 
             background: rgba(249, 115, 22, 0.6);
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);
           }
         }
       `}</style>
@@ -210,6 +296,6 @@ export const JsonHighlighter: React.FC<JsonHighlighterProps> = ({
           autoCapitalize="off"
         />
       </div>
-    </div>
+    </>
   );
 };
